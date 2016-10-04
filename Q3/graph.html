@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.link {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.5px;
+}
+
+circle {
+  fill: #ccc;
+  stroke: #333;
+  stroke-width: 1.5px;
+}
+
+.d3-tip {
+  line-height: 1;
+  font-weight: bold;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 2px;
+}
+
+text {
+  font: 10px sans-serif;
+  pointer-events: none;
+  text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+}
+
+</style>
+<body>
+<script src="../lib/d3/d3.v3.min.js"></script>
+<script src="../lib/d3/d3.tip.v0.6.3.js"></script>
+<script>
+
+// http://blog.thomsonreuters.com/index.php/mobile-patent-suits-graphic-of-the-day/
+var links = [
+  {source: "Microsoft", target: "Amazon", type: "licensing"},
+  {source: "Microsoft", target: "HTC", type: "licensing"},
+  {source: "Samsung", target: "Apple", type: "suit"},
+  {source: "Motorola", target: "Apple", type: "suit"},
+  {source: "Nokia", target: "Apple", type: "resolved"},
+  {source: "HTC", target: "Apple", type: "suit"},
+  {source: "Kodak", target: "Apple", type: "suit"},
+  {source: "Microsoft", target: "Barnes & Noble", type: "suit"},
+  {source: "Microsoft", target: "Foxconn", type: "suit"},
+  {source: "Oracle", target: "Google", type: "suit"},
+  {source: "Apple", target: "HTC", type: "suit"},
+  {source: "Microsoft", target: "Inventec", type: "suit"},
+  {source: "Samsung", target: "Kodak", type: "resolved"},
+  {source: "LG", target: "Kodak", type: "resolved"},
+  {source: "RIM", target: "Kodak", type: "suit"},
+  {source: "Sony", target: "LG", type: "suit"},
+  {source: "Kodak", target: "LG", type: "resolved"},
+  {source: "Apple", target: "Nokia", type: "resolved"},
+  {source: "Qualcomm", target: "Nokia", type: "resolved"},
+  {source: "Apple", target: "Motorola", type: "suit"},
+  {source: "Microsoft", target: "Motorola", type: "suit"},
+  {source: "Motorola", target: "Microsoft", type: "suit"},
+  {source: "Huawei", target: "ZTE", type: "suit"},
+  {source: "Ericsson", target: "ZTE", type: "suit"},
+  {source: "Kodak", target: "Samsung", type: "resolved"},
+  {source: "Apple", target: "Samsung", type: "suit"},
+  {source: "Kodak", target: "RIM", type: "suit"},
+  {source: "Nokia", target: "Qualcomm", type: "suit"}
+];
+
+var nodes = {};
+
+
+// Compute the distinct nodes from the links.
+links.forEach(function(link) {
+  
+  link.source = nodes[link.source] || (nodes[link.source] = {name: link.source});
+  link.target = nodes[link.target] || (nodes[link.target] = {name: link.target});
+});
+
+
+console.log(nodes);
+var width = 960,
+    height = 500;
+
+var tooltip = d3.tip()
+                .attr('class', 'd3-tip')
+                .html(function(d) { 
+                  if (d.name=="Ericsson" || d.name=="Huawei"){
+                    return "<span>" + "ZTE"+ "</span>"; 
+                  }
+                  else if (d.name == "ZTE"){
+                    return "<span>" + "Ericsson" + "<br>" + "Huawei" + "</span>"; 
+                  }
+
+                  else if (d.name == "Oracle"){
+                    return "<span>" + "Google" + "</span>"; 
+                  }
+                  else if (d.name == "Google"){
+                    return "<span>" + "Oracle" + "</span>"; 
+                  }
+                  else if (d.name == "Qualcomm"){
+                    return "<span>" + "Nokia" + "</span>"; 
+                  }
+                  else if (d.name == "Nokia"){
+                    return "<span>" + "Qualcomm" + "<br>" + "Apple" + "</span>"; 
+                  }
+                  else if (d.name == "Apple"){
+                    return "<span>" + "HTC" + "<br>" + "Kodak" + "<br>" + "Motorola" + "<br>" + "Nokia" + "<br>" + "Samsung"+ "</span>"; 
+                  }
+                  else if (d.name == "Samsung"){
+                    return "<span>" + "Apple" + "<br>" + "Kodak" + "</span>"; 
+                  }
+                  else if (d.name == "Kodak"){
+                    return "<span>" + "Samsung" + "<br>" + "Apple" +"<br>" + "RIM" + "<br>" + "LG"+"</span>"; 
+                  }
+                  else if (d.name == "RIM"){
+                    return "<span>" + "Kodak" + "</span>"; 
+                  }
+                  else if (d.name == "LG"){
+                    return "<span>" + "Kodak" + "<br>" + "Sony" + "</span>"; 
+                  }
+                  else if (d.name == "Sony"){
+                    return "<span>" + "LG" + "</span>"; 
+                  }
+                  else if (d.name == "HTC" || d.name== "Motorola"){
+                    return "<span>" + "Apple" + "<br>" + "Microsoft" + "</span>"; 
+                  }
+                  else if (d.name == "Microsoft"){
+                    return "<span>" + "Motorola" + "<br>" + "HTC" +"<br>" + "Foxconn" + "<br>" + "Amazon"+"<br>" + "Barnes & Noble"+"<br>" + "Inventec"+"</span>"; 
+                  }
+                  else if (d.name == "Foxconn"|| d.name== "Amazon" || d.name== "Barnes & Noble"|| d.name == "Inventec"){
+                    return "<span>" + "Microsoft" + "</span>"; 
+                  }
+
+                });
+
+var force = d3.layout.force()
+    .nodes(d3.values(nodes))
+    .links(links)
+    .size([width, height])
+    .linkDistance(60)
+    .charge(-300)
+    .on("tick", tick)
+    .start();
+
+
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+// call the library
+svg.call(tooltip);
+
+// Per-type markers, as they don't inherit styles.
+svg.append("defs").selectAll("marker")
+    .data(["suit", "licensing", "resolved"])
+  .enter().append("marker")
+    .attr("id", function(d) { return d; })
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 15)
+    .attr("refY", -1.5)
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .attr("orient", "auto")
+  .append("path")
+    .attr("d", "M0,-5L10,0L0,5");
+
+var path = svg.append("g").selectAll("path")
+    .data(force.links())
+  .enter().append("path")
+    .attr("class", function(d) { return "link " + d.type; })
+    .attr("marker-end", function(d) { return "url(#" + d.type + ")"; })
+    .style("stroke",function(d){
+      if (d.type == "licensing"){
+        return "blue";
+      }
+      else if (d.type == "suit"){
+        return "red";
+      }
+      else if (d.type == "resolved"){
+        return "green";
+      };
+    });
+
+var group = svg.append("g").selectAll("group")
+    .data(force.nodes())
+  .enter().append("g")
+    .attr("class","node")
+    .call(force.drag);
+
+var circle = group.append("circle")
+    .attr("class","node")
+    .attr("r", 8)
+    .on("dblclick",doubleclick)
+    .on('mouseover',tooltip.show)
+    .on('mouseout',tooltip.hide)
+    .style("fill", function(d) { return "yellow";});
+
+var label = group.append("text")
+    .attr("class", "textnode")
+    .text(function(d){return d.name;});
+
+
+// Use elliptical arc path segments to doubly-encode directionality.
+function tick() {
+  path.attr("d", linkArc);
+  circle.attr("transform", transform);
+  label.attr("transform", transform2);
+}
+
+function linkArc(d) {
+  var dx = d.target.x - d.source.x,
+      dy = d.target.y - d.source.y,
+      dr = Math.sqrt(dx * dx + dy * dy);
+  return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
+}
+
+function transform(d) {
+  return "translate(" + d.x + "," + d.y + ")";
+}
+
+//move the position of the label on the right
+function transform2(d) {
+  a=d.x + 8;
+  b=d.y;
+  return "translate(" + a + "," + b + ")";
+}
+
+// action on double click
+function doubleclick(d){
+  console.log("ok");
+  if (d.fixed == true){
+    d3.select(this)
+    .style("fill", function(d) { return "yellow";})
+    .classed("fixed",d.fixed = false);
+  }else {
+    d3.select(this)
+    .style("fill", function(d) { return "red";})
+    .classed("fixed",d.fixed = true);
+  }
+}
+
+</script>
